@@ -59,7 +59,7 @@ unpaired_mean_diff <- dabest(iris, Species, Petal.Width,
 
 # Display the results in a user-friendly format.
 unpaired_mean_diff
-#> DABEST (Data Analysis with Bootstrap Estimation in R) v0.3.0
+#> DABEST (Data Analysis with Bootstrap Estimation in R) v0.3.1
 #> ============================================================
 #> 
 #> Good morning!

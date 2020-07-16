@@ -1,0 +1,68 @@
+---
+title: "Coin tutorial"
+author: "Joses Ho"
+date: "7/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+```{r load.libraries}
+library(coin)
+library(dplyr)
+library(dabestr)
+```
+
+## Load Data
+
+
+```{r load.data}
+attach(wellbeing_ind) # From dabestr package.
+
+
+wide.wellbeing <- 
+  tibble::tibble(
+    control = wellbeing_ind$control, 
+    test = wellbeing_ind$test)
+
+
+tidy.wellbeing   <- 
+  wide.wellbeing %>%
+  tidyr::gather(key = Group, value = Measurement)
+
+tidy.wellbeing[["Group"]] <- forcats::as_factor(tidy.wellbeing[["Group"]])
+
+# 
+# head(iris)
+# 
+# iris.two <- iris %>% filter(Species %in% c("versicolor", "virginica"))
+```
+
+
+## Run Tests
+
+```{r run.tests}
+
+# # Conventional t-test
+# t.test(Sepal.Width ~ Species, data = iris.two)
+
+
+# Permutation t-test
+independence_test(Measurement ~ Group,
+                  distribution = "asymptotic",
+                  data = tidy.wellbeing)
+
+```
+
+## Prototype tidy wrapper
+
+```{r}
+
+```
+
+
+

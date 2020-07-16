@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Load Libraries
 
-```{r load.libraries}
+```{r load.librarieslo}
 library(coin)
 library(dplyr)
 library(dabestr)
@@ -19,6 +19,37 @@ library(dabestr)
 
 ## Load Data
 
+```{r create.data, message=FALSE}
+library(dplyr)
+
+set.seed(54321)
+
+N = 40
+c1 <- rnorm(N, mean = 100, sd = 25)
+c2 <- rnorm(N, mean = 100, sd = 50)
+g1 <- rnorm(N, mean = 120, sd = 25)
+g2 <- rnorm(N, mean = 80, sd = 50)
+g3 <- rnorm(N, mean = 100, sd = 12)
+g4 <- rnorm(N, mean = 100, sd = 50)
+gender <- c(rep('Male', N/2), rep('Female', N/2))
+dummy <- rep("Dummy", N)
+id <- 1: N
+
+
+wide.data <- 
+  tibble::tibble(
+    Control1 = c1, Control2 = c2,
+    Group1 = g1, Group2 = g2, Group3 = g3, Group4 = g4,
+    Dummy = dummy,
+    Gender = gender, ID = id)
+
+
+my.data   <- 
+  wide.data %>%
+  tidyr::gather(key = Group, value = Measurement, -ID, -Gender, -Dummy)
+
+head(my.data)
+```
 
 ```{r load.data}
 attach(wellbeing_ind) # From dabestr package.
@@ -43,18 +74,71 @@ tidy.wellbeing[["Group"]] <- forcats::as_factor(tidy.wellbeing[["Group"]])
 ```
 
 
+```{r two.group.unpaired}
+
+library(dabestr)
+
+two.group.unpaired <- 
+  my.data %>%
+  dabest(Group, Measurement, 
+         # The idx below passes "Control" as the control group, 
+         # and "Group1" as the test group. The mean difference
+         # will be computed as mean(Group1) - mean(Control1).
+         idx = c("Control1", "Group1"), 
+         paired = FALSE)
+
+# Calling the object automatically prints out a summary.
+two.group.unpaired
+
+raw.data <- two.group.unpaired$data
+
+raw.data[["ID"]] <- forcats::as_factor(raw.data[["ID"]])
+
+```
+
+
+
+```{r compute.mean.diff}
+two.group.unpaired.meandiff <- mean_diff(two.group.unpaired)
+
+# Calling the above object produces a textual summary of the computed effect size.
+two.group.unpaired.meandiff
+```
+
+
 ## Run Tests
 
 ```{r run.tests}
 
-# # Conventional t-test
-# t.test(Sepal.Width ~ Species, data = iris.two)
+# Conventional t-test
+# t.test(Measurement ~ Group, data = tidy.wellbeing, var.equal = FALSE, paired = TRUE)
+
+# # Permutation t-test
+# independence_test(Measurement ~ Group,
+#                   teststat = "quadratic",
+#                   distribution = "exact",
+#                   data = tidy.wellbeing)
+# 
+# # Permutation t-test
+# owt <- oneway_test(Measurement ~ Group,
+#             distribution = "exact",
+#             data = tidy.wellbeing)
+
+t.test(Measurement ~ Group,
+       data = raw.data, 
+       var.equal = FALSE, 
+       paired = TRUE)
 
 
-# Permutation t-test
-independence_test(Measurement ~ Group,
-                  distribution = "asymptotic",
-                  data = tidy.wellbeing)
+
+owt <- oneway_test(Measurement ~ Group,
+            distribution = "approximate",
+            data = raw.data)
+
+owt_paired <- oneway_test(Measurement ~ Group | ID,
+            distribution = "approximate",
+            data = raw.data)
+# pvalue(owt)
 
 ```
 

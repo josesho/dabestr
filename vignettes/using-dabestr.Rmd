@@ -73,7 +73,7 @@ two.group.unpaired <-
          paired = FALSE)
 
 # Calling the object automatically prints out a summary.
-two.group.unpaired 
+two.group.unpaired
 ```
 
 To compute the mean difference between `Group1` and `Control1`, we apply the `mean_diff()` function to the `dabest` object created above.

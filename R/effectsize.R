@@ -325,7 +325,7 @@ effsize_boot <- function(data, effsize_func, R = 5000, paired = FALSE) {
 
 
 #' @importFrom boot boot boot.ci
-#' @importFrom dplyr arrange bind_rows filter group_by summarize
+#' @importFrom dplyr arrange bind_rows filter group_by summarize rename
 #' @importFrom magrittr %>%
 #' @importFrom rlang quo_name
 #' @importFrom stringr str_interp
@@ -489,6 +489,18 @@ effect_size <- function(.data, ..., effect.size, ci, reps, seed) {
       bootci <- boot.ci(boot_result, conf = ci/100, type = c("perc", "bca"))
 
 
+      #### Compute permuatation t-test. ####
+      # Added in v0.3.1.
+      data_for_permtest <- raw.data %>%
+                           filter(!!x_enquo %in% c(!!group[1], !!grp)) %>%
+                           rename(xcol = !!x_enquo) %>%
+                           rename(ycol = !!y_enquo)
+      oneway_permtest <- coin::oneway_test(ycol ~ xcol,
+                                           distribution = 'approximate',
+                                           data = data_for_permtest)
+
+
+
       #### Save pairwise result. ####
       row <- tibble(
         # Convert the name of `func` to a string.
@@ -505,6 +517,7 @@ effect_size <- function(.data, ..., effect.size, ci, reps, seed) {
         bca_ci_high = bootci$bca[5],
         pct_ci_low = bootci$percent[4],
         pct_ci_high = bootci$percent[5],
+        pvalue = coin::pvalue(oneway_permtest),
         bootstraps = list(as.vector(boot_result$t)),
         nboots = length(boot_result$t)
       )

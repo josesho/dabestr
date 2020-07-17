@@ -353,8 +353,13 @@ effect_size <- function(.data, ..., effect.size, ci, reps, seed) {
   # The variables below should are quosures!
   x_enquo             <-  .data$x
   y_enquo             <-  .data$y
-  effect.size_enquo   <-  quo_name(effect.size)
 
+  if (isTRUE(paired)) {
+    idcol_enquo       <- .data$id.column
+    raw.data[[quo_name(idcol_enquo)]] <- forcats::as_factor(raw.data[[quo_name(idcol_enquo)]])
+  }
+
+  effect.size_enquo   <-  quo_name(effect.size)
   x_quoname           <-  quo_name(x_enquo)
   y_quoname           <-  quo_name(y_enquo)
 
@@ -492,13 +497,24 @@ effect_size <- function(.data, ..., effect.size, ci, reps, seed) {
       #### Compute permuatation t-test. ####
       # Added in v0.3.1.
       data_for_permtest <- raw.data %>%
-                           filter(!!x_enquo %in% c(!!group[1], !!grp)) %>%
-                           rename(xcol = !!x_enquo) %>%
-                           rename(ycol = !!y_enquo)
-      oneway_permtest <- coin::oneway_test(ycol ~ xcol,
-                                           distribution = 'approximate',
-                                           data = data_for_permtest)
+        filter(!!x_enquo %in% c(!!group[1], !!grp)) %>%
+        rename(xcol = !!x_enquo) %>%
+        rename(ycol = !!y_enquo)
 
+      set.seed(seed)
+      if (isTRUE(paired)) {
+        data_for_permtest <- data_for_permtest %>%
+          rename(idcol = !!idcol_enquo)
+
+        oneway_permtest <- coin::oneway_test(ycol ~ xcol | idcol,
+                                             distribution = 'approximate',
+                                             data = data_for_permtest)
+      } else {
+        oneway_permtest <- coin::oneway_test(ycol ~ xcol,
+                                             distribution = 'approximate',
+                                             data = data_for_permtest)
+      }
+      set.seed(NULL)
 
 
       #### Save pairwise result. ####
@@ -517,7 +533,7 @@ effect_size <- function(.data, ..., effect.size, ci, reps, seed) {
         bca_ci_high = bootci$bca[5],
         pct_ci_low = bootci$percent[4],
         pct_ci_high = bootci$percent[5],
-        pvalue = coin::pvalue(oneway_permtest),
+        pvalue = coin::pvalue(oneway_permtest)[1],
         bootstraps = list(as.vector(boot_result$t)),
         nboots = length(boot_result$t)
       )

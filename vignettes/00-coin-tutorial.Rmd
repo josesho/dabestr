@@ -53,25 +53,82 @@ head(my.data)
 
 ```{r load.data}
 attach(wellbeing_ind) # From dabestr package.
+attach(wellbeing_paired) # From dabestr package.
 
 
-wide.wellbeing <- 
+wide.wellbeing_ind <- 
   tibble::tibble(
     control = wellbeing_ind$control, 
     test = wellbeing_ind$test)
 
 
-tidy.wellbeing   <- 
+tidy.wellbeing_ind   <- 
   wide.wellbeing %>%
   tidyr::gather(key = Group, value = Measurement)
 
-tidy.wellbeing[["Group"]] <- forcats::as_factor(tidy.wellbeing[["Group"]])
+tidy.wellbeing_ind[["Group"]] <- forcats::as_factor(tidy.wellbeing_ind[["Group"]])
 
-# 
+
+
+wide.wellbeing_paired <- 
+  tibble::tibble(
+    before = wellbeing_paired$before, 
+    after = wellbeing_paired$after,
+    ID = 1:length(wellbeing_paired$before))
+
+
+tidy.wellbeing_paired   <- 
+  wide.wellbeing_paired %>%
+  tidyr::gather(key = Group, value = Measurement, -ID)
+
+
+tidy.wellbeing_paired[["Group"]] <- forcats::as_factor(tidy.wellbeing_paired[["Group"]])
+tidy.wellbeing_paired[["ID"]] <- forcats::as_factor(tidy.wellbeing_paired[["ID"]])
+
 # head(iris)
 # 
 # iris.two <- iris %>% filter(Species %in% c("versicolor", "virginica"))
 ```
+
+
+```{r}
+dabestr_wellbeing_paired <- dabest(tidy.wellbeing_paired, 
+                                   Group, Measurement,
+                                   idx = c('before', 'after'),
+                                   id.column = ID, paired = TRUE)
+
+dabestr_wellbeing_paired_meandiff <- mean_diff(dabestr_wellbeing_paired)
+
+dabestr_wellbeing_paired_meandiff$result$pvalue
+```
+
+
+```{r}
+dabestr_wellbeing_ind <- dabest(tidy.wellbeing, 
+                                   Group, Measurement,
+                                   idx = c('control', 'test'))
+
+dabestr_wellbeing_ind_meandiff <- mean_diff(dabestr_wellbeing_ind)
+
+dabestr_wellbeing_ind_meandiff$result$pvalue
+```
+
+
+```{r}
+# t.test(Measurement ~ Group,
+#        data = tidy.wellbeing_paired, 
+#        var.equal = FALSE, 
+#        paired = TRUE)
+
+set.seed(1234)
+owt_paired <- oneway_test(Measurement ~ Group | ID,
+            distribution = "approximate",
+            data = tidy.wellbeing_paired)
+pvalue(owt_paired)
+set.seed(NULL)
+```
+
+
 
 
 ```{r two.group.unpaired}
@@ -106,6 +163,22 @@ two.group.unpaired.meandiff
 ```
 
 
+```{r}
+two.group.paired <- 
+  my.data %>%
+  dabest(Group, Measurement, 
+         # The idx below passes "Control" as the control group, 
+         # and "Group1" as the test group. The mean difference
+         # will be computed as mean(Group1) - mean(Control1).
+         idx = c("Control1", "Group1"), 
+         id.col = ID,
+         paired = TRUE)
+
+two.group.paired.meandiff <- mean_diff(two.group.paired)
+
+```
+
+
 ## Run Tests
 
 ```{r run.tests}
@@ -127,7 +200,7 @@ two.group.unpaired.meandiff
 t.test(Measurement ~ Group,
        data = raw.data, 
        var.equal = FALSE, 
-       paired = TRUE)
+       paired = FALSE)
 
 
 
@@ -138,7 +211,9 @@ owt <- oneway_test(Measurement ~ Group,
 owt_paired <- oneway_test(Measurement ~ Group | ID,
             distribution = "approximate",
             data = raw.data)
-# pvalue(owt)
+
+
+pvalue(owt_paired)
 
 ```
 
